@@ -1,0 +1,86 @@
+Une fois le signal numérique reçu par l'ADC, il est important de passer ce signal dans un filtre numérique afin de ne conserver que les informations pertinentes (voir Fig. \ref{fig:filtrenumbloc}). Pour ce faire, nous avons dû faire face à différents choix afin de modéliser le filtre de la manière la plus efficace possible.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.8]{pdffiles/filtrenumbloc.pdf}
+    \caption{Schéma-bloc de la partie communication, focalisé sur le filtre numérique. La partie en rouge est détaillée sur la Figure \ref{fig:block_diagram}}
+    \label{fig:filtrenumbloc}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[node distance=2cm, auto]
+        % ADC Block
+        \node [block,fill=mygreen] (adc) {ADC};
+        
+        % Blocks for 900 Hz
+        \node [block, right of=adc, node distance=3cm, fill=myblue] (filter1) {Filtrage (900 Hz)};
+        \node [block, right of=filter1, node distance=3cm] (window1) {Fenêtre (900 Hz)};
+        \node [block, right of=window1, node distance=3cm] (detector1) {Détecteur d'amplitude (900 Hz)};
+        
+        % Blocks for 1100 Hz
+        \node [block, below of=filter1, node distance=2.5cm, fill=myblue] (filter2) {Filtrage (1100 Hz)};
+        \node [block, right of=filter2, node distance=3cm] (window2) {Fenêtre (1100 Hz)};
+        \node [block, right of=window2, node distance=3cm] (detector2) {Détecteur d'amplitude (1100 Hz)};
+        
+        % Demodulation Block
+        \node [block, right of=detector1, node distance=4cm, text width=8em] (demod) {Démodulation\\ (FskDetector)};
+
+        % Connecting lines for 900 Hz
+        \path [line] (adc) -- (filter1);
+        \path [line] (filter1) -- (window1);
+        \path [line] (window1) -- (detector1);
+        \path [line] (detector1) -- (demod);
+        
+        % Connecting lines for 1100 Hz
+        \path [line] (adc) -- (filter2);
+        \path [line] (filter2) -- (window2);
+        \path [line] (window2) -- (detector2);
+        \path [line] (detector2) -- (demod);
+    \end{tikzpicture}
+    \caption{Schéma-bloc détaillé entre l'ADC et la Démodulation, focalisé sur le filtre numérique}
+    \label{fig:block_diagram}
+\end{figure}
+
+\subsection{Filtre FIR ou IIR}
+
+\subsubsection{Filtres FIR}
+
+Les filtres FIR sont caractérisés par une structure qui ne fait pas appel à la rétroaction. Leur sortie est calculée uniquement à partir de leur entrée et ils ont l'équation suivante:
+\[
+y[n] = \sum_{i=0}^{N} b_i x[n-i]
+\]
+où $b_i$ sont les coefficients du filtre, $x[n]$ est le signal d'entrée, et $N$ est l'ordre du filtre.
+
+Les principaux avantages des filtres FIR sont leur bonne stabilité et la possibilité de réaliser une réponse en fréquence strictement linéaire. Cependant, pour atteindre des spécifications strictes de la bande de transition et de l'atténuation dans la bande d'arrêt, ils requièrent un ordre très élevé, ce qui est peu pratique dans le cadre de ce projet.
+
+\subsubsection{Filtres IIR}
+
+À l'opposé, les filtres IIR utilisent la rétroaction dans leur structure, ce qui les rend plus efficaces qu'un filtre FIR du même ordre pour obtenir une meilleure atténuation. L'équation générale d'un filtre IIR est:
+\[
+y[n] =  \sum_{j=0}^{N} b_j x[n-j] - \sum_{i=1}^{N} a_i y[n-i]
+\]
+où $a_i$ et $b_j$ sont les coefficients du filtre, et $N$ est l'ordre du filtre.
+
+Les filtres IIR peuvent être instables si les pôles sont mal placés, mais une bonne conception permet d'éviter ces problèmes.
+
+\subsubsection{Comparaison et Choix}
+
+\textbf{Complexité computationnelle}
+
+Le principal avantage des filtres IIR sur les FIR est leur faible ordre pour une atténuation donnée dans la bande d'arrêt, ce qui se traduit par moins de coefficients et donc moins d'opérations arithmétiques par échantillon traité. Ceci est particulièrement bénéfique dans les applications embarquées où la puissance de calcul et la mémoire sont limitées.
+
+\textbf{Performance en Temps Réel}
+
+La structure récursive des filtres IIR permet une implémentation plus efficace sur des processeurs simples, tels que le dsPIC utilisé pour le robot. Cette efficacité est très importante pour assurer une démodulation rapide et sans perte d'informations.
+
+Le choix entre FIR et IIR dépend aussi des spécificités du système, notamment la tolérance aux phases non-linéaires et la nécessité d'une stabilité absolue. Pour notre robot, la légère phase non-linéaire introduite par un filtre IIR est un compromis acceptable pour bénéficier de sa faible complexité et de sa haute efficacité. Nous avons donc décidé de faire un filtre numérique IIR.
+
+\input{Filtre num/design}
+\input{Filtre num/Implémentation}
+\input{Filtre num/Fenetre}
+\input{Filtre num/Démodulation}
+\section{Conclusion du traitement des signaux audio}
+
+Les sections 3.1 à 3.5 de notre projet montrent l'importance d'un traitement du signal  pour assurer le bon fonctionnement de notre robot. Nous avons dimensionné une chaîne d'acquisition qui remplit le cahier des charges. Ensuite, la conversion analogique-numérique (ADC) a été configurée pour permettre une démodulation rapide sans surcharger le CPU. En choisissant des filtres IIR, nous avons pu obtenir une atténuation efficace avec un ordre minimal, facilitant une implémentation rapide et précise. L'utilisation d'une fenêtre glissante de 16 échantillons pour sélectionner le maximum a permis de réduire la fréquence d'échantillonnage effective, tandis que les seuils d'amplitude ajustés empêchent les faux positifs tout en assurant la détection correcte des signaux. La fonction \texttt{fskDetector} analyse les bits 1 ou 0 des deux fréquences centrales à la sortie du seuil d'amplitude pour déterminer l'état du signal et créer une trame de bits, ce qui permet au robot de savoir quelle action exécuter. Il a fallu que toutes ces étapes soient réalisées en moins de 62.5 $\mu$s pour s'assurer de ne pas perdre des informations du signal.
+

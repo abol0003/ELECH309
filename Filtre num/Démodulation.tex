@@ -1,0 +1,139 @@
+
+\section{Démodulation}
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[node distance=2cm, auto]
+        % ADC Block
+        \node [block,fill=mygreen] (adc) {ADC};
+        
+        % Blocks for 900 Hz
+        \node [block, right of=adc, node distance=3cm, fill=mygreen] (filter1) {Filtrage (900 Hz)};
+        \node [block, right of=filter1, node distance=3cm,fill=mygreen] (window1) {Fenêtre (900 Hz)};
+        \node [block, right of=window1, node distance=3cm,fill=mygreen] (detector1) {Détecteur d'amplitude (900 Hz)};
+        
+        % Blocks for 1100 Hz
+        \node [block, below of=filter1, node distance=2.5cm,fill=mygreen] (filter2) {Filtrage (1100 Hz)};
+        \node [block, right of=filter2, node distance=3cm,fill=mygreen] (window2) {Fenêtre (1100 Hz)};
+        \node [block, right of=window2, node distance=3cm,fill=mygreen] (detector2) {Détecteur d'amplitude (1100 Hz)};
+        
+        % Demodulation Block
+        \node [block, right of=detector1, node distance=4cm, text width=8em,fill=myblue] (demod) {Démodulation\\ (FskDetector)};
+
+        % Connecting lines for 900 Hz
+        \path [line] (adc) -- (filter1);
+        \path [line] (filter1) -- (window1);
+        \path [line] (window1) -- (detector1);
+        \path [line] (detector1) -- (demod);
+        
+        % Connecting lines for 1100 Hz
+        \path [line] (adc) -- (filter2);
+        \path [line] (filter2) -- (window2);
+        \path [line] (window2) -- (detector2);
+        \path [line] (detector2) -- (demod);
+    \end{tikzpicture}
+    \caption{Schéma-bloc détaillé entre l'ADC et la Démodulation, focus sur la démodulation}
+    \label{fig:block_diagram_demo}
+\end{figure}
+
+Dans le cadre du projet, la fonction de démodulation nous a été fournie. Les fichiers correspondants sont \texttt{FskDetector.c} et \texttt{FskDetector.h}. Cette fonction est appelée après le bloc du seuil d'amplitude (voir Figure \ref{fig:block_diagram_demo}). Elle prend en paramètres \texttt{detLow} et \texttt{detHigh}, qui correspondent respectivement aux détections des fréquences à 900 Hz et 1100 Hz. Cette fonction détermine tout d'abord l'état du signal comme suit :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{detHigh} & \textbf{detLow} & \textbf{signalState} \\ \hline
+0                & 0               & SILENCE              \\ \hline
+0                & 1               & BIT0                 \\ \hline
+1                & 0               & BIT1                 \\ \hline
+1                & 1               & BRUIT                \\ \hline
+\end{tabular}
+\caption{États du signal}
+\label{tab:signal_states}
+\end{table}
+
+Après avoir déterminé l'état du signal, celui-ci est envoyé dans une machine d'état permettant de créer une trame de bits constituée de 10 bits. Ce message créé permet au robot de savoir quelle action il doit réaliser, car chaque trame de bits est associée à un mouvement spécifique.
+
+\subsection{Définition des Paramètres}
+
+Les paramètres de la démodulation sont définis dans le fichier \texttt{FskDetector.h} :
+
+\begin{verbatim}
+#define MESSAGE_LENGTH      10
+#define SAMPLING_FREQ       1000
+#define BIT_FREQ            10
+#define OSR                 (SAMPLING_FREQ/BIT_FREQ)
+#define FSK_MIN_SAMPLES_NB  (3*OSR/4)
+\end{verbatim}
+
+\begin{itemize}
+    \item \textbf{MESSAGE\_LENGTH} : Nombre de bits de données dans une trame.
+    \item \textbf{SAMPLING\_FREQ} : Fréquence d'échantillonnage du signal audio, en Hz.
+    \item \textbf{BIT\_FREQ} : Fréquence des bits de la trame, en Hz.
+    \item \textbf{OSR} : OverSampling Ratio, le rapport entre la fréquence d'échantillonnage et la fréquence des bits.
+    \item \textbf{FSK\_MIN\_SAMPLES\_NB} : Nombre minimum d'échantillons pour considérer un bit comme valide.
+\end{itemize}
+
+% \subsection{Fonction \texttt{fskDetector}}
+
+La fonction \texttt{FskDetector} implémente une machine d'état pour traiter les échantillons et assembler une trame de bits. Voici une explication détaillée du fonctionnement de cette machine d'état :
+
+\begin{itemize}
+    \item \textbf{Détermination de l'État du Signal} :
+    Le signal est classé en \texttt{SILENCE}, \texttt{BIT0}, \texttt{BIT1}, ou \texttt{BRUIT} en fonction des valeurs de \texttt{detLow} et \texttt{detHigh}.
+    
+    \item \textbf{Machine d'État} :
+    \begin{itemize}
+        \item \textbf{IDLE} :
+        \begin{itemize}
+            \item \textbf{Actions} : Aucune action spécifique.
+            \item \textbf{Transitions} : Si un \texttt{BIT0} est détecté, l'état passe à \texttt{START\_BIT} et les compteurs sont initialisés.
+        \end{itemize}
+        
+        \item \textbf{START\_BIT} :
+        \begin{itemize}
+            \item \textbf{Actions} : Augmenter le compteur de temps (\texttt{timer}) et mettre à jour les compteurs de \texttt{BIT0} et \texttt{BIT1}.
+            \item \textbf{Transitions} : Si le compteur de temps atteint \texttt{OSR} et que le nombre de \texttt{BIT0} est suffisant (\texttt{FSK\_MIN\_SAMPLES\_NB}), l'état passe à \texttt{DATA}. Sinon, il retourne à \texttt{IDLE}.
+        \end{itemize}
+        
+        \item \textbf{DATA} :
+        \begin{itemize}
+            \item \textbf{Actions} : Augmenter le compteur de temps et mettre à jour les compteurs de \texttt{BIT0} et \texttt{BIT1}.
+            \item \textbf{Transitions} : Si le compteur de temps atteint \texttt{OSR} et que le nombre de \texttt{BIT0} ou \texttt{BIT1} est suffisant, le bit est ajouté au message et le compteur de bits est diminué. Si tous les bits de données ont été reçus, l'état passe à \texttt{PARITY}.
+        \end{itemize}
+        
+        \item \textbf{PARITY} :
+        \begin{itemize}
+            \item \textbf{Actions} : Augmenter le compteur de temps et mettre à jour les compteurs de \texttt{BIT0} et \texttt{BIT1}.
+            \item \textbf{Transitions} : Si le compteur de temps atteint \texttt{OSR} et que la parité est correcte, l'état passe à \texttt{STOP\_BIT}. Sinon, il retourne à \texttt{IDLE}.
+        \end{itemize}
+        
+        \item \textbf{STOP\_BIT} :
+        \begin{itemize}
+            \item \textbf{Actions} : Augmenter le compteur de temps et mettre à jour les compteurs de \texttt{BIT0} et \texttt{BIT1}.
+            \item \textbf{Transitions} : Si le compteur de temps atteint \texttt{OSR} et que le nombre de \texttt{BIT0} est suffisant, le message est marqué comme complet (\texttt{messageComplete}), et l'état retourne à \texttt{IDLE}.
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+Chaque état effectue des actions spécifiques et vérifie les transitions en fonction des signaux détectés, assurant ainsi la démodulation. La machine d'état permet de traiter les échantillons reçus, de vérifier la validité de chaque bit (données et parité), et de former une trame de bits complète utilisée pour contrôler les actions du robot.
+% \begin{figure}[h]
+%     \centering
+%     \begin{tikzpicture}[shorten >=1pt, node distance=3cm, on grid, auto]
+%         \node[state, initial] (idle) {IDLE};
+%         \node[state] (start) [right=of idle] {START\_BIT};
+%         \node[state] (data) [right=of start] {DATA};
+%         \node[state] (parity) [below=of data] {PARITY};
+%         \node[state] (stop) [left=of parity] {STOP\_BIT};
+
+%         \path[->]
+%         (idle) edge [bend left] node {BIT0} (start)
+%         (start) edge [bend left] node {Valid Start Bit} (data)
+%         (data) edge [bend left] node {All Data Bits} (parity)
+%         (parity) edge [bend left] node {Valid Parity} (stop)
+%         (stop) edge [bend left] node {Valid Stop Bit} (idle);
+%     \end{tikzpicture}
+%     \caption{Diagramme d'état de la fonction \texttt{fskDetector}}
+%     \label{fig:fskdetector_state_machine}
+% \end{figure}
+

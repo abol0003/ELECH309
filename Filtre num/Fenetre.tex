@@ -1,0 +1,48 @@
+\section{Fenêtre Glissante et Seuil d'Amplitude}
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[node distance=2cm, auto]
+        % ADC Block
+        \node [block,fill=mygreen] (adc) {ADC};
+        
+        % Blocks for 900 Hz
+        \node [block, right of=adc, node distance=3cm, fill=mygreen] (filter1) {Filtrage (900 Hz)};
+        \node [block, right of=filter1, node distance=3cm,fill=myblue] (window1) {Fenêtre (900 Hz)};
+        \node [block, right of=window1, node distance=3cm,fill=myblue] (detector1) {Détecteur d'amplitude (900 Hz)};
+        
+        % Blocks for 1100 Hz
+        \node [block, below of=filter1, node distance=2.5cm,fill=mygreen] (filter2) {Filtrage (1100 Hz)};
+        \node [block, right of=filter2, node distance=3cm,fill=myblue] (window2) {Fenêtre (1100 Hz)};
+        \node [block, right of=window2, node distance=3cm,fill=myblue] (detector2) {Détecteur d'amplitude (1100 Hz)};
+        
+        % Demodulation Block
+        \node [block, right of=detector1, node distance=4cm, text width=8em] (demod) {Démodulation\\ (FskDetector)};
+
+        % Connecting lines for 900 Hz
+        \path [line] (adc) -- (filter1);
+        \path [line] (filter1) -- (window1);
+        \path [line] (window1) -- (detector1);
+        \path [line] (detector1) -- (demod);
+        
+        % Connecting lines for 1100 Hz
+        \path [line] (adc) -- (filter2);
+        \path [line] (filter2) -- (window2);
+        \path [line] (window2) -- (detector2);
+        \path [line] (detector2) -- (demod);
+    \end{tikzpicture}
+    \caption{Schéma-bloc détaillé entre l'ADC et la Démodulation, focus sur la fenêtre et la détection d'amplitude}
+    \label{fig:block_diagram_fe}
+\end{figure}
+\subsection{Fenêtre Glissante}
+\label{fenetre_glissante}
+Pour implémenter la démodulation du signal, nous avons implémenter une fenêtre glissante permettant de choisir la plus grande valeur parmi les échantillons dans la fenêtre. La fréquence d'échantillonnage étant de 16 kHz, il a fallu faire une fenêtre glissante sur $\frac{16000 \text{ Hz}}{900 \text{ Hz}} \approx 17$ échantillons et sur $\frac{16000 \text{ Hz}}{1100 \text{ Hz}} \approx 15$ échantillons. Il est acceptable de considérer une fenêtre glissante identique pour les deux fréquences prenant en compte 16 échantillons. Il est important de considérer que désormais, à la sortie de ce bloc, nous ne travaillons plus à 16 kHz mais bien à 1 kHz, étant donné que la fenêtre glissante ne renvoie que le plus grand échantillon parmi 16. 
+
+\subsubsection{Implementation de la Fenêtre Glissante}
+Une fois que les échantillons ont été filtrés, un maximum est déterminé dans une fenêtre glissante de 16 échantillons. Pour chaque échantillon traité, s'il s'agit du premier échantillon de la fenêtre, il est initialisé comme maximum. Pour les échantillons suivants, une comparaison est faite pour déterminer si l'échantillon filtré courant est supérieur au maximum actuel. Si c'est le cas, il devient le nouveau maximum.
+\subsection{Seuil d'Amplitude}
+Le plus grand échantillon à la sortie de la fenêtre glissante est ensuite comparé à un seuil d'amplitude. Ce seuil est choisi en fonction des valeurs des filtres obtenues lors de la simulation du filtre numérique. Pour rappel, les amplitudes maximales obtenues en virgule flottante sur les graphes pour 900 Hz et 1100 Hz étaient respectivement de 3 et 0.75 (\ref{res_filtre_num}).
+
+Dans le code, la sortie du filtre est en virgule fixe. Par conséquent, des seuils de 500 et de 150 ont été choisis pour les amplitudes à 900 Hz et 1100 Hz respectivement. Ces valeurs ont été déterminées à partir de différents tests visant à ajuster précisément les seuils. L'objectif était de trouver un équilibre entre des seuils suffisamment élevés pour éviter que le bruit ne soit interprété comme un signal, mais pas trop élevés afin de ne pas manquer les véritables signaux. Ainsi, les seuils de 500 pour 900 Hz et de 150 pour 1100 Hz garantissent une détection fiable et précise des signaux. La fonction du seuil d'amplitude renvoie 0 si l'amplitude est inférieur au seuil et 1 pour le cas inverse.
+
+
+
