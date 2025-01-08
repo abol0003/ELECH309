@@ -1,0 +1,220 @@
+\documentclass[12pt,a4paper]{ULBReport} %Template de rapport
+\usepackage[utf8]{inputenc}
+\graphicspath{ {./Pictures/} }
+\sceau{Pictures/sceauULB.jpg}
+\usepackage{multirow}
+\usepackage{listings}
+\usepackage{color} 
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning}
+\usetikzlibrary{shapes.geometric, arrows}
+\tikzstyle{block} = [rectangle, draw, text width=5em, text centered, rounded corners, minimum height=4em]
+\tikzstyle{line} = [draw, -latex']
+\usepackage{setspace} 
+\usepackage{amsmath}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{pdfpages}
+\usepackage{biblatex}
+\usepackage{floatrow}
+\usepackage{subcaption} 
+\usepackage{siunitx}
+\usepackage{minted}
+\addbibresource{biblio.bib}
+\definecolor{myblue}{RGB}{216,230,250}
+\definecolor{mygreen}{RGB}{213,232,212}
+
+\lstdefinelanguage{Python}{ 
+numbers=left, 
+numberstyle=\footnotesize, 
+numbersep=1em, 
+xleftmargin=1em, 
+framextopmargin=2em, 
+framexbottommargin=2em, 
+showspaces=false, 
+showtabs=false, 
+showstringspaces=false, 
+frame=l, 
+tabsize=4, 
+% Basic 
+basicstyle=\ttfamily\small\setstretch{1}, 
+backgroundcolor=\color{Background}, 
+% Comments 
+commentstyle=\color{Comments}\slshape, 
+% Strings 
+stringstyle=\color{Strings}, 
+morecomment=[s][\color{Strings}]{"""}{"""}, 
+morecomment=[s][\color{Strings}]{'''}{'''}, 
+% keywords 
+morekeywords={import,from,class,def,for,while,if,is,in,elif,else,not,and,or,print,break,continue,return,True,False,None,access,as,,del,except,exec,finally,global,import,lambda,pass,print,raise,try,assert}, 
+keywordstyle={\color{Keywords}\bfseries}, 
+% additional keywords 
+morekeywords={[2]@invariant,pylab,numpy,np,scipy}, 
+keywordstyle={[2]\color{Decorators}\slshape}, 
+emph={self}, 
+emphstyle={\color{self}\slshape}, 
+% 
+} 
+
+\newcommand{\dd}[1]{\mathrm{d}#1}
+\newcommand{\avec}[0]{
+    \hspace{0.2cm}
+    \text{avec :}
+    \hspace{0.2cm}
+}
+\newcommand{\ou}[0]{
+    \hspace{0.2cm}
+    \text{d'où : }
+    \hspace{0.2cm}
+}
+\newcommand{\et}[0]{
+    \hspace{0.2cm}
+    \text{et}
+    \hspace{0.2cm}
+}
+\newcommand{\mtxt}[1]{
+    \hspace{0.2cm}
+    \text{#1}
+}
+
+%La Commande \TODO permet de mettre en rouge clairement ce qu'il reste à faire.
+\newcommand{\TODO}[1]{
+    \color{red}
+    \textbf{TODO : } #1
+    \color{black}
+}
+
+\begin{document}
+
+\titleULB {
+    title={ELEC-H309: Projet intégré},
+    studies={IRCI - BA3 Électronique et télécommunication},
+    course ={ELEC-H309},
+    author={\textit{Auteur:} \\ BOLLENGIER Alexis \\ COLOT Emmeran\\ GÖNEN Sefa},
+    date={\textbf{Année Académique :} \\ 2023 - 2024},
+    teacher={\textit{Professeur : } \\ MILOJEVIC Dragomir\\ NONCLERCQ Antoine\\ OSEE Michel\\ QUITIN François\\ ROBERT Frédéric\\ },
+    logo={Pictures/logo-polytech.jpg},
+    manyAuthor
+}
+
+\chapter{Introduction}
+
+Dans le cadre du projet d'ELEC-H309, nous devons réaliser un robot qui doit satisfaire le cahier des charges suivant\footnote{On ne reprend ici que les informations disponibles dans le fichier \textit{Analyse du projet.md}, tous les détails sont disponible dans le \href{https://gitlab.com/mosee/elech309-2024}{gitlab du projet} } :
+\begin{enumerate}
+    \item[$\bullet$] Le robot doit se déplacer précisément et de façon autonome
+    \item[$\bullet$] Le robot doit recevoir et comprendre des signaux de commande audio
+    \item[$\bullet$] Le robot doit obéir aux ordres \textit{Avance}, \textit{Recule}, \textit{Tourne à droite} et \textit{Tourne à gauche} (accompagnés d'un paramètre indiquant la distance ou l'angle à atteindre)
+\end{enumerate}
+
+Ce cahier des charges est accompagné de contraintes. D'un côté, on nous impose des contraintes environnementales : 
+
+\begin{enumerate}
+    \item[$\bullet$] Le robot doit être capable de se déplacer sur un terrain solide, plat et horizontal (typiquement un table)
+    \item[$\bullet$] Le robot doit être capable de fonctionner dans un environnement calme (à l'intérieur, sans bruit de fond)
+\end{enumerate}
+
+De l'autre côté, on nous impose des contraintes d'utilisateurs :
+
+\begin{enumerate}
+    \item[$\bullet$] La tension d'alimentation doit être inférieur ou égale à 24V (pour éviter tout risque d'électrocution)
+    \item[$\bullet$] La vitesse de translation du robot doit être telle que celui-ci puisse être facilement "maîtrisé" si nécessaire durant les tests du programme, indépendamment de la manière dont les moteurs sont commandés
+    \item[$\bullet$] Le robot doit être facilement transportable
+\end{enumerate}
+
+De plus, sachant que le dimensionnement du robot et la base roulante ont été réalisés à l'avance, nous pouvons diviser ce qu'il nous reste à faire en deux parties distinctes : une partie \textbf{mouvement} où nous allons coder le microcontrôleur responsable de contrôler les déplacements du robot et une partie \textbf{traitement des signaux audio} consacrée à l'analyse des commandes sonores.  
+
+\chapter{Mouvement}
+
+\input{partie_mouvement}
+
+\chapter{Traitement des signaux audio}
+
+\input{TexFiles/Traitement signal/introTraitement}
+
+\section{Chaîne d'acquisition}
+
+\input{TexFiles/Traitement signal/ChaineAcqui/introChaineAcqui}
+
+
+\subsection{Bloc Amplification}
+
+
+
+\input{TexFiles/Traitement signal/ChaineAcqui/Ampli}
+
+
+
+
+\subsection{Bloc Filtre de garde}
+
+
+\input{TexFiles/Traitement signal/ChaineAcqui/FiltreGarde}
+
+
+\subsection{Chaîne d'acquisition finale}
+
+\input{TexFiles/Traitement signal/ChaineAcqui/chaineAcqui}
+
+%\subsection{Critiques}
+
+%\input{TexFiles/Traitement signal/ChaineAcqui/critiqueChaine}
+
+\newpage
+
+
+\section{Conversion Analogique-Numérique}
+
+\input{TexFiles/Traitement signal/ADC/ADC}
+
+\newpage
+\section{Filtre numérique}
+\input{Filtre num/prel}
+
+%\section{Démodulation} \label{test}
+
+\newpage
+\chapter{Assemblage final}
+
+Nous avons divisé ce projet en deux grandes parties : une partie \textbf{mouvement} et une partie \textbf{traitement des signaux audio}. Pour pouvoir clôturer ce projet, il faut réunir les deux parties.
+
+Comme dit précédemment, on n'utilise qu'un seul dsPIC pour tout le projet. Ainsi, la commande que doit exécuter la partie \textbf{mouvement} est simplement passée en argument lors de l'appel à la fonction concernée. Cet appel se fait à la fin de la partie \textbf{traitement des signaux audio}, lorsque le signal audio a été démodulé. Le code final se trouve dans l'annexe \ref{code:main}.
+
+La dernière étape avant de conclure le projet est de vérifier que le robot fonctionne.
+
+\subsubsection{Critique}
+
+Il faut émettre le signal audio très proche du robot pour qu'il puisse détecter la commande. Ce n'est pas pratique. On peut régler ce problème en trouvant une manière de concentrer le signal dans une direction (changer le microphone et/ou l'émetteur du signal audio).
+
+\newpage
+\chapter{Conclusion}
+
+En conclusion, lors de ce projet, nous avons dimensionné une chaîne d'acquisition, nous avons configuré un microcontrôleur (UART, PIO, ADC, TIMER, etc...) et nous avons réalisé un filtre numérique ainsi qu'un régulateur numérique. De plus, ce projet nous a permis de développer une méthode de travail : nous divisons le projet en petit blocs, on travaille sur chaque bloc et on le valide avant de passer au suivant.\\
+Après avoir mis en place toutes ces étapes, le robot exécute correctement les instructions du signal audio. L'objectif a donc été atteint à moins de 5\% de translation. 
+
+%\section{Envoie au dsPIC}
+
+\appendix
+
+%Les pages suivantes proviennent du fichier \textit{Analyse du projet.md} disponible dans le \href{https://gitlab.com/mosee/elech309-2024}{gitlab du projet}
+%\includepdf[scale=0.5,pages=1,pagecommand={\chapter{Analyse du projet}\label{analyseproj}},linktodoc=true]{pdffiles/Analyse du projet.pdf} 
+%\includepdf[scale=0.8,pages=2-]{pdffiles/Analyse du projet.pdf} 
+
+\chapter{Commande mécanique}
+%Les pages suivantes proviennent du fichier \textit{Etude deplacement du robot.md} disponible dans le \href{https://gitlab.com/mosee/elech309-2024}{gitlab du projet}
+%\includepdf[scale=0.8,pages=1,pagecommand={\section{Etude du déplacement du robot }\label{etuderob}},linktodoc=true]{pdffiles/Etude du deplacement du robot.pdf} 
+%\includepdf[scale=0.8,pages=2-]{pdffiles/Etude du deplacement du robot.pdf} 
+\label{code:mouvement}
+\inputminted[breakanywhere=true, breaklines=true, breaksymbol=  ,linenos=true, numberblanklines=false, fontsize=\footnotesize, frame=single, fontfamily=helvetica, autogobble=true,label=\textbf{Code final - mouvement},labelposition=topline]{c}{code/move.c}
+\label{code:test_consigne}
+\inputminted[breakanywhere=true, breaklines=true, breaksymbol=  ,linenos=true, numberblanklines=false, fontsize=\footnotesize, frame=single, fontfamily=helvetica, autogobble=true,label=\textbf{test - génération de consigne},labelposition=topline]{c}{code/test consigne.c}
+
+\chapter{Traitement des signaux audio}
+
+\input{TexFiles/Appendix/TraitementSignal/AppendixTrait}
+
+\chapter{Code final}
+\label{code:main}
+\inputminted[breakanywhere=true, breaklines=true, breaksymbol=  ,linenos=true, numberblanklines=false, fontsize=\footnotesize, frame=single, fontfamily=helvetica, autogobble=true,label=\textbf{Code final - main},labelposition=topline]{c}{code/main.c}
+
+
+\end{document}
